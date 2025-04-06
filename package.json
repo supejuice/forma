@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "genkit-cli": "^1.5.0",
+    "genkitx-mistral": "^0.20.0"
+  }
+}
