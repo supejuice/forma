@@ -14,25 +14,29 @@ To install and set up the project, follow these steps:
 
 ```zsh
 git clone https://github.com/yourusername/forma.git
+# if you haven't installed node
 cd forma
 brew update
 brew install node
 node -v
 npm -v
+# genkit node modules
 npm i genkit
-npm i genkit-cli  # necessary for any genkit commands to run
-npm install genkitx-mistral
+npm i genkit-cli 
 npx genkit init
-# Add additional setup instructions here
+# go packages
+go get github.com/firebase/genkit/go/core
+go get github.com/firebase/genkit/go/genkit
+go get github.com/firebase/genkit/go/plugins/server
 ```
+Finally, add your gemini api key to shell profile:
+export GEMINI_API_KEY=<YOUR_KEY>
 
 ## Usage
 
-Provide instructions on how to use the project:
-
-```bash
+```zsh
 # Example usage
-command-to-run
+npx genkit start go run main.go
 ```
 
 ## Contributing
@@ -47,7 +51,7 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 
-This project is licensed under the [Apache 2.0 License] - see the [LICENSE](https://github.com/supejuice/forma/blob/main/LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](https://github.com/supejuice/forma/blob/main/LICENSE) file for details.
 
 ## Contact
 
