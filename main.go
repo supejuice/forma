@@ -62,6 +62,28 @@ func main() {
 		return resp.Text(), nil
 	})
 
+	companyInfoPrompt, perr := genkit.DefinePrompt(g, "companyInfo",
+		ai.WithPromptText(companyInfoTemplate),
+		ai.WithModel(m),
+		ai.WithConfig(&ai.GenerationCommonConfig{
+			Temperature: 0,}),
+		ai.WithInputType(companyInfoInput{}),
+		ai.WithOutputType(companyInfoOutput{}),
+	)
+	if perr != nil {
+	log.Fatalf("failed to define prompt: %v", perr) 
+	}
+	genkit.DefineFlow(g, "companyInfo", func(ctx context.Context, input companyInfoInput) (string, error) {
+		
+		resp, err := companyInfoPrompt.Execute(ctx, ai.WithInput(input))
+		if err != nil {
+			log.Fatalf("failed to execute prompt: %v", err) 
+			return "", err
+		}
+		log.Printf("Raw output: %v", resp.Text())
+		return resp.Text(), nil
+	})
+
 	mux := http.NewServeMux()
 	for _, a := range genkit.ListFlows(g) {
 		mux.HandleFunc("POST /"+a.Name(), genkit.Handler(a))
@@ -82,7 +104,7 @@ type jokeOutput struct {
 	Joke string `json:"joke"`
 }
 
-const calTrackingTemplate = `measure calories in {{food}} of quantity {{quantity}} {{unit_of_measurement}}`
+const calTrackingTemplate = `measure calories and macros (in grams) in {{food}} of quantity {{quantity}} {{unit_of_measurement}}`
 
 type calTrackingInput struct {
 	Food string `json:"food"`
@@ -95,4 +117,19 @@ type calTrackingOutput struct {
 	Protein_G int `json:"protein_g"`
 	Fat_G int `json:"fat_g"`
 	Carbs_G int `json:"carbs_g"`
+}
+const companyInfoTemplate = `
+Provide detailed information about the company with ticker symbol {{ticker}}. Include the following:
+1. Subsidiaries (listed and unlisted)
+2. Related companies
+3. Brands`
+
+type companyInfoInput struct {
+	Ticker string `json:"ticker"`
+}
+
+type companyInfoOutput struct {
+	Subsidiaries    []string `json:"subsidiaries"`
+	RelatedCompanies []string `json:"related_companies"`
+	Brands          []string `json:"brands"`
 }
