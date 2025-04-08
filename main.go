@@ -6,78 +6,39 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
-	"github.com/firebase/genkit/go/core"
+	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
+	"github.com/firebase/genkit/go/plugins/googlegenai"
 	"github.com/firebase/genkit/go/plugins/server"
 )
 
 func main() {
 	ctx := context.Background()
-	g, err := genkit.Init(ctx)
+	g, err := genkit.Init(ctx,  genkit.WithPlugins(&googlegenai.GoogleAI{}))
 	if err != nil {
 		log.Fatalf("failed to create Genkit: %v", err)
 	}
 
-	basic := genkit.DefineFlow(g, "basic", func(ctx context.Context, subject string) (string, error) {
-		foo, err := genkit.Run(ctx, "call-llm", func() (string, error) { return "subject: " + subject, nil })
+	genkit.DefineFlow(g, "jokesFlow", func(ctx context.Context, input string) (string, error) {
+		m := googlegenai.GoogleAIModel(g, "gemini-2.0-flash")
+		if m == nil {
+			return "", errors.New("jokesFlow: failed to find model")
+		}
+
+		resp, err := genkit.Generate(ctx, g,
+			ai.WithModel(m),
+			ai.WithConfig(&ai.GenerationCommonConfig{
+				Temperature: 0,
+				Version:     "gemini-2.0-flash-001",
+			}),
+			ai.WithPromptText(fmt.Sprintf(`Tell silly short jokes about %s`, input)))
 		if err != nil {
 			return "", err
 		}
-		return genkit.Run(ctx, "call-llm", func() (string, error) { return "foo: " + foo, nil })
-	})
 
-	genkit.DefineFlow(g, "parent", func(ctx context.Context, _ any) (string, error) {
-		return basic.Run(ctx, "foo")
-	})
-
-	type complex struct {
-		Key   string `json:"key"`
-		Value int    `json:"value"`
-	}
-
-	genkit.DefineFlow(g, "complex", func(ctx context.Context, c complex) (string, error) {
-		foo, err := core.Run(ctx, "call-llm", func() (string, error) { return c.Key + ": " + strconv.Itoa(c.Value), nil })
-		if err != nil {
-			return "", err
-		}
-		return foo, nil
-	})
-
-	genkit.DefineFlow(g, "throwy", func(ctx context.Context, err string) (string, error) {
-		return "", errors.New(err)
-	})
-
-	type chunk struct {
-		Count int `json:"count"`
-	}
-
-	genkit.DefineStreamingFlow(g, "streamy", func(ctx context.Context, count int, cb func(context.Context, chunk) error) (string, error) {
-		i := 0
-		if cb != nil {
-			for ; i < count; i++ {
-				if err := cb(ctx, chunk{i}); err != nil {
-					return "", err
-				}
-			}
-		}
-		return fmt.Sprintf("done: %d, streamed: %d times", count, i), nil
-	})
-
-	genkit.DefineStreamingFlow(g, "streamyThrowy", func(ctx context.Context, count int, cb func(context.Context, chunk) error) (string, error) {
-		i := 0
-		if cb != nil {
-			for ; i < count; i++ {
-				if i == 3 {
-					return "", errors.New("boom!")
-				}
-				if err := cb(ctx, chunk{i}); err != nil {
-					return "", err
-				}
-			}
-		}
-		return fmt.Sprintf("done: %d, streamed: %d times", count, i), nil
+		text := resp.Text()
+		return text, nil
 	})
 
 	mux := http.NewServeMux()

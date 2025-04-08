@@ -10,27 +10,35 @@ Forma is a Calorie Tracker app designed to utlise AI chat completions as your ba
 
 ## Installation
 
-To install and set up the project, follow these steps:
+First install node if you haven't for the Genkit dev tools to work
 
 ```zsh
-git clone https://github.com/yourusername/forma.git
-# if you haven't installed node
 cd forma
 brew update
 brew install node
 node -v
 npm -v
-# genkit node modules
+```
+
+Install Genkit dev tools
+```zsh
 npm i genkit
 npm i genkit-cli 
 npx genkit init
-# go packages
-go get github.com/firebase/genkit/go/core
+```
+
+Install go packages
+```zsh
+go get github.com/firebase/genkit/go/ai
 go get github.com/firebase/genkit/go/genkit
 go get github.com/firebase/genkit/go/plugins/server
+go get github.com/firebase/genkit/go/plugins/googlegenai
 ```
+
 Finally, add your gemini api key to shell profile:
+```zsh
 export GEMINI_API_KEY=<YOUR_KEY>
+```
 
 ## Usage
 
