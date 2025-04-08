@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -19,26 +17,28 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create Genkit: %v", err)
 	}
-
-	genkit.DefineFlow(g, "jokesFlow", func(ctx context.Context, input string) (string, error) {
-		m := googlegenai.GoogleAIModel(g, "gemini-2.0-flash")
-		if m == nil {
-			return "", errors.New("jokesFlow: failed to find model")
-		}
-
-		resp, err := genkit.Generate(ctx, g,
-			ai.WithModel(m),
-			ai.WithConfig(&ai.GenerationCommonConfig{
-				Temperature: 0,
-				Version:     "gemini-2.0-flash-001",
-			}),
-			ai.WithPromptText(fmt.Sprintf(`Tell silly short jokes about %s`, input)))
+	m := googlegenai.GoogleAIModel(g, "gemini-2.0-flash")
+	jokePrompt, err := genkit.DefinePrompt(g, "joke",
+		ai.WithPromptText(jokeTemplate),
+		ai.WithModel(m),
+		ai.WithConfig(&ai.GenerationCommonConfig{
+			Temperature: 1,}),
+		ai.WithInputType(jokeInput{}),
+		ai.WithOutputType(jokeOutput{}),
+	)
+	if err != nil {
+	log.Fatalf("failed to define prompt: %v", err) 
+	}
+	genkit.DefineFlow(g, "joke", func(ctx context.Context, input jokeInput) (string, error) {
+		
+		resp, err := jokePrompt.Execute(ctx, ai.WithInput(input))
 		if err != nil {
+			log.Fatalf("failed to define prompt: %v", err) 
 			return "", err
 		}
 
-		text := resp.Text()
-		return text, nil
+		log.Printf("Raw output: %v", resp.Text())
+		return resp.Text(), nil
 	})
 
 	mux := http.NewServeMux()
@@ -46,4 +46,19 @@ func main() {
 		mux.HandleFunc("POST /"+a.Name(), genkit.Handler(a))
 	}
 	log.Fatal(server.Start(ctx, "127.0.0.1:8080", mux))
+}
+
+const jokeTemplate = `
+Hi, I am a person {{height}}cm tall and {{weight}}kg heavy for {{age}} of age. Roast me
+ based on the following info.`
+
+type jokeInput struct {
+	Height  string `json:"height"`
+	Weight   string `json:"weight"`
+	Age string `json:"age"`
+}
+
+type jokeOutput struct {
+	Joke string `json:"joke"`
+	Error string `json:"error"`
 }

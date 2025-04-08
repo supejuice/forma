@@ -46,6 +46,10 @@ export GEMINI_API_KEY=<YOUR_KEY>
 # Example usage
 npx genkit start go run main.go
 ```
+Rest endpoints will look like:
+```zsh
+127.0.0.1:8080/<flowName>
+```
 
 ## Contributing
 
