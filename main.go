@@ -18,7 +18,7 @@ func main() {
 		log.Fatalf("failed to create Genkit: %v", err)
 	}
 	m := googlegenai.GoogleAIModel(g, "gemini-2.0-flash")
-	jokePrompt, err := genkit.DefinePrompt(g, "joke",
+	jokePrompt, perr := genkit.DefinePrompt(g, "joke",
 		ai.WithPromptText(jokeTemplate),
 		ai.WithModel(m),
 		ai.WithConfig(&ai.GenerationCommonConfig{
@@ -26,17 +26,16 @@ func main() {
 		ai.WithInputType(jokeInput{}),
 		ai.WithOutputType(jokeOutput{}),
 	)
-	if err != nil {
-	log.Fatalf("failed to define prompt: %v", err) 
+	if perr != nil {
+	log.Fatalf("failed to define prompt: %v", perr) 
 	}
 	genkit.DefineFlow(g, "joke", func(ctx context.Context, input jokeInput) (string, error) {
 		
 		resp, err := jokePrompt.Execute(ctx, ai.WithInput(input))
 		if err != nil {
-			log.Fatalf("failed to define prompt: %v", err) 
+			log.Fatalf("failed to execute prompt: %v", err) 
 			return "", err
 		}
-
 		log.Printf("Raw output: %v", resp.Text())
 		return resp.Text(), nil
 	})
@@ -49,8 +48,7 @@ func main() {
 }
 
 const jokeTemplate = `
-Hi, I am a person {{height}}cm tall and {{weight}}kg heavy for {{age}} of age. Roast me
- based on the following info.`
+Hi, I am a person {{height}}cm tall and {{weight}}kg heavy for {{age}} of age. Roast me.`
 
 type jokeInput struct {
 	Height  string `json:"height"`
@@ -60,5 +58,4 @@ type jokeInput struct {
 
 type jokeOutput struct {
 	Joke string `json:"joke"`
-	Error string `json:"error"`
 }
