@@ -40,6 +40,28 @@ func main() {
 		return resp.Text(), nil
 	})
 
+	calTrackingPrompt, perr := genkit.DefinePrompt(g, "calTracking",
+		ai.WithPromptText(calTrackingTemplate),
+		ai.WithModel(m),
+		ai.WithConfig(&ai.GenerationCommonConfig{
+			Temperature: 0,}),
+		ai.WithInputType(calTrackingInput{}),
+		ai.WithOutputType(calTrackingOutput{}),
+	)
+	if perr != nil {
+	log.Fatalf("failed to define prompt: %v", perr) 
+	}
+	genkit.DefineFlow(g, "calTracking", func(ctx context.Context, input calTrackingInput) (string, error) {
+		
+		resp, err := calTrackingPrompt.Execute(ctx, ai.WithInput(input))
+		if err != nil {
+			log.Fatalf("failed to execute prompt: %v", err) 
+			return "", err
+		}
+		log.Printf("Raw output: %v", resp.Text())
+		return resp.Text(), nil
+	})
+
 	mux := http.NewServeMux()
 	for _, a := range genkit.ListFlows(g) {
 		mux.HandleFunc("POST /"+a.Name(), genkit.Handler(a))
@@ -58,4 +80,19 @@ type jokeInput struct {
 
 type jokeOutput struct {
 	Joke string `json:"joke"`
+}
+
+const calTrackingTemplate = `measure calories in {{food}} of quantity {{quantity}} {{unit_of_measurement}}`
+
+type calTrackingInput struct {
+	Food string `json:"food"`
+	Quantity float32 `json:"quantity"`
+	UnitOfMeasurement string `json:"unit_of_measurement"`
+}
+
+type calTrackingOutput struct {
+	Calories int `json:"calories"`
+	Protein_G int `json:"protein_g"`
+	Fat_G int `json:"fat_g"`
+	Carbs_G int `json:"carbs_g"`
 }
