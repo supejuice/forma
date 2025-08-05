@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter forma",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/forma_flutter/lib/main.dart",
+      "cwd": "${workspaceFolder}/forma_flutter",
+      "args": [],
+      "flutterMode": "debug"
+    }
+  ]
+}
