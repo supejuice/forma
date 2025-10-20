@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:forma_flutter/ui/welcome_screen.dart';
+import 'package:forma_flutter/app_router.dart';
 
 void main() {
   runApp(const MainApp());
@@ -10,6 +10,8 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WelcomeScreen();
+    return MaterialApp.router(
+      routerConfig: AppRouter().config(),
+    );
   }
 }
