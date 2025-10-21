@@ -48,4 +48,4 @@ app.*.map.json
 # Build runner generated files
 *.g.dart
 *.gr.dart
-pubspec.lock
+*.lock
