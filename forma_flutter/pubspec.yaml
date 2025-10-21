@@ -12,6 +12,7 @@ dependencies:
   riverpod_generator: ^3.0.3
   talker_flutter: ^5.0.2
   auto_route: ^10.2.0
+  animated_text_kit: ^4.3.0
 
 dev_dependencies:
   flutter_test:
