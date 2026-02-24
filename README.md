@@ -1,70 +1,116 @@
 # Forma
 
-Forma is a Calorie Tracker app designed to utlise AI chat completions as your backend service.
+Forma is an AI-assisted nutrition and calorie tracking project.
 
-## Features
+The primary product is the Flutter app in `forma_flutter`, focused on fast meal logging and local calorie trend tracking.
 
-- Flutter app: multi platform
-- Genkit CLI
-- Mistral apis support
+## Main App (`forma_flutter`)
 
-## Installation
+Implemented features:
 
-First install node if you haven't for the Genkit dev tools to work
+- Mistral API key onboarding (secure local storage)
+- Free-text meal input -> Mistral nutrition extraction
+- Calories + macros + sodium estimation
+- Local persistence with SQLite
+- Trend analytics for `7D`, `30D`, `90D`, and custom range
+- Daily calorie target management
+- Riverpod state management
+- Design-system-driven UI with lightweight animations
+
+## Flutter Quick Start
 
 ```zsh
-cd forma
+cd forma_flutter
+flutter pub get
+flutter run
+```
+
+On first launch, add your Mistral API key in the onboarding screen.
+
+## Flutter Quality Checks
+
+```zsh
+cd forma_flutter
+flutter analyze
+flutter test
+flutter build web --no-wasm-dry-run
+flutter build apk --debug
+```
+
+## Go App (Genkit Server)
+
+The repository also includes a Go + Genkit server in `main.go` with these flows:
+
+- `joke`
+- `calTracking`
+- `companyInfo`
+
+### Go App Prerequisites
+
+Install Node.js (for Genkit CLI):
+
+```zsh
 brew update
 brew install node
 node -v
 npm -v
 ```
 
-Install Genkit dev tools
+Install JS dependencies at repo root:
+
 ```zsh
-npm i genkit
-npm i genkit-cli 
-npx genkit init
+npm install
 ```
 
-Install go packages
+Install/update Go dependencies:
+
 ```zsh
-go get github.com/firebase/genkit/go/ai
-go get github.com/firebase/genkit/go/genkit
-go get github.com/firebase/genkit/go/plugins/server
-go get github.com/firebase/genkit/go/plugins/googlegenai
+go mod tidy
 ```
 
-Finally, add your gemini api key to shell profile:
+Set Gemini API key (required by `googlegenai` plugin in `main.go`):
+
 ```zsh
 export GEMINI_API_KEY=<YOUR_KEY>
 ```
 
-## Usage
+### Run Go App
+
+Run directly:
 
 ```zsh
-# Example usage
-npx genkit start go run main.go
+go run main.go
 ```
-Rest endpoints will look like:
+
+Optional Genkit dev mode (if preferred in your local workflow):
+
 ```zsh
-127.0.0.1:8080/<flowName>
+npx genkit start -- go run main.go
 ```
 
-## Contributing
+The server starts on `127.0.0.1:8080` and flow endpoints follow:
 
-Contributions are welcome! Please follow these steps:
+```text
+POST http://127.0.0.1:8080/<flowName>
+```
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature-name`).
-3. Commit your changes (`git commit -m 'Add feature'`).
-4. Push to the branch (`git push origin feature-name`).
-5. Open a pull request.
+Examples:
+
+- `POST /joke`
+- `POST /calTracking`
+- `POST /companyInfo`
+
+## Repo Layout
+
+- `forma_flutter/` Flutter client app (active product)
+- `main.go`, `go.mod` Go/Genkit flows
+
+## Additional Docs
+
+- `forma_flutter/README.md`
+- `forma_flutter/docs/YEGOR256_GUIDELINES.md`
+- `forma_flutter/ASSETS_ATTRIBUTION.md`
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](https://github.com/supejuice/forma/blob/main/LICENSE) file for details.
-
-## Contact
-
-For questions or feedback, please contact [sysalchemist@hotmail.com].
+This project is licensed under Apache 2.0. See `LICENSE`.
