@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/api_key_storage.dart';
 
 final Provider<ApiKeyStorage> apiKeyStorageProvider = Provider<ApiKeyStorage>(
-  (Ref ref) => SecureApiKeyStorage(const FlutterSecureStorage()),
+  (Ref ref) => ResilientApiKeyStorage(
+    primary: SecureApiKeyStorage(const FlutterSecureStorage()),
+    fallback: SharedPrefsApiKeyStorage(),
+  ),
 );
 
 final AsyncNotifierProvider<ApiKeyController, String?>
@@ -19,8 +22,15 @@ class ApiKeyController extends AsyncNotifier<String?> {
   }
 
   Future<void> clear() async {
-    await ref.read(apiKeyStorageProvider).clear();
     state = const AsyncValue<String?>.data(null);
+    try {
+      await ref
+          .read(apiKeyStorageProvider)
+          .clear()
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // State is already cleared for current session.
+    }
   }
 
   Future<void> save(String key) async {
@@ -28,8 +38,15 @@ class ApiKeyController extends AsyncNotifier<String?> {
     if (trimmed.isEmpty) {
       return;
     }
-    await ref.read(apiKeyStorageProvider).write(trimmed);
     state = AsyncValue<String?>.data(trimmed);
+    try {
+      await ref
+          .read(apiKeyStorageProvider)
+          .write(trimmed)
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Key remains available in-memory for current app session.
+    }
   }
 
   Future<void> reload() async {

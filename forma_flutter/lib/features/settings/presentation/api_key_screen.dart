@@ -39,9 +39,29 @@ class _ApiKeyScreenState extends ConsumerState<ApiKeyScreen> {
 
     try {
       if (validateFirst) {
-        await ref.read(mistralApiClientProvider).validateKey(key);
+        await ref
+            .read(mistralApiClientProvider)
+            .validateKey(key)
+            .timeout(
+              const Duration(seconds: 12),
+              onTimeout:
+                  () =>
+                      throw const AppException(
+                        'Validation timed out. Try Save Without Check.',
+                      ),
+            );
       }
-      await ref.read(apiKeyControllerProvider.notifier).save(key);
+      await ref
+          .read(apiKeyControllerProvider.notifier)
+          .save(key)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout:
+                () =>
+                    throw const AppException(
+                      'Saving key took too long. Please retry.',
+                    ),
+          );
       if (mounted) {
         _showSnackBar('Mistral key saved.');
       }
