@@ -8,20 +8,30 @@ class HeroBanner extends StatelessWidget {
     required this.title,
     required this.subtitle,
     super.key,
+    this.height,
   });
 
   final String imageUrl;
   final String title;
   final String subtitle;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final Orientation orientation = MediaQuery.orientationOf(context);
+    final double bannerHeight =
+        height ??
+        (orientation == Orientation.landscape &&
+                MediaQuery.sizeOf(context).width > 820
+            ? 220
+            : 188);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.lg),
       child: SizedBox(
-        height: 188,
+        height: bannerHeight,
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
@@ -46,7 +56,7 @@ class HeroBanner extends StatelessWidget {
                 Object error,
                 StackTrace? stackTrace,
               ) {
-                return Container(color: const Color(0xFFBDD5C5));
+                return Container(color: scheme.primaryContainer);
               },
             ),
             const DecoratedBox(

@@ -38,6 +38,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ..selection = TextSelection.collapsed(offset: text.length);
   }
 
+  bool _useWideLayout(BuildContext context, BoxConstraints constraints) {
+    final Size size = MediaQuery.sizeOf(context);
+    final bool isLandscape = size.width > size.height;
+    return constraints.maxWidth >= AppBreakpoints.large ||
+        (isLandscape && constraints.maxWidth >= AppBreakpoints.medium);
+  }
+
+  double _horizontalPaddingForWidth(double width) {
+    if (width >= AppBreakpoints.large) {
+      return AppSpacing.xl;
+    }
+    if (width >= AppBreakpoints.medium) {
+      return AppSpacing.lg;
+    }
+    return 0;
+  }
+
+  List<_MealLogDayGroup> _groupRecentMeals(List<MealLogEntry> entries) {
+    final List<_MealLogDayGroup> groups = <_MealLogDayGroup>[];
+    for (final MealLogEntry entry in entries) {
+      final DateTime day = DateTime(
+        entry.loggedAt.year,
+        entry.loggedAt.month,
+        entry.loggedAt.day,
+      );
+      if (groups.isEmpty || !DateUtils.isSameDay(groups.last.day, day)) {
+        groups.add(_MealLogDayGroup(day: day, entries: <MealLogEntry>[entry]));
+      } else {
+        groups.last.entries.add(entry);
+      }
+    }
+    return groups;
+  }
+
+  String _groupLabel(DateTime day) {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime yesterday = today.subtract(const Duration(days: 1));
+    if (DateUtils.isSameDay(day, today)) {
+      return 'Today';
+    }
+    if (DateUtils.isSameDay(day, yesterday)) {
+      return 'Yesterday';
+    }
+    return formatLongDate(day);
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<MealEntryState>(mealEntryControllerProvider, (previous, next) {
@@ -73,148 +120,217 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _ => 1900,
     };
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 120),
-      children: <Widget>[
-        HeroBanner(
-          imageUrl: AppImages.hero,
-          title: 'Log your meals fast',
-          subtitle: 'Target: $dailyTarget kcal/day',
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        SectionCard(
+    final Widget composerSection = SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'What did you last eat?',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _mealController,
+            minLines: 3,
+            maxLines: 5,
+            textInputAction: TextInputAction.newline,
+            decoration: const InputDecoration(
+              hintText: 'Example: grilled chicken wrap, apple, and iced latte',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          recentSuggestions.when(
+            data: (List<String> suggestions) {
+              if (suggestions.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return Wrap(
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: suggestions
+                    .map(
+                      (String suggestion) => ActionChip(
+                        label: Text(
+                          suggestion,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onPressed: () => _useSuggestion(suggestion),
+                      ),
+                    )
+                    .toList(growable: false),
+              );
+            },
+            error: (_, _) => const SizedBox.shrink(),
+            loading: () => const LinearProgressIndicator(minHeight: 2),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AnimatedContainer(
+            duration: AppDurations.short,
+            curve: Curves.easeOut,
+            transform: Matrix4.diagonal3Values(
+              mealState.isSubmitting ? 0.98 : 1.0,
+              mealState.isSubmitting ? 0.98 : 1.0,
+              1,
+            ),
+            child: ElevatedButton.icon(
+              onPressed: mealState.isSubmitting ? null : _submitMeal,
+              icon:
+                  mealState.isSubmitting
+                      ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Icon(Icons.auto_awesome_rounded),
+              label: Text(
+                mealState.isSubmitting
+                    ? 'Estimating nutrition...'
+                    : 'Analyze and Save Meal',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final Widget latestBreakdown = AnimatedSwitcher(
+      duration: AppDurations.medium,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child:
+          mealState.latestEntry == null
+              ? const SizedBox.shrink()
+              : NutritionBreakdownCard(
+                key: ValueKey<int?>(mealState.latestEntry?.id),
+                entry: mealState.latestEntry!,
+              ),
+    );
+
+    final Widget recentLogsList = recentMeals.when(
+      data: (List<MealLogEntry> entries) {
+        if (entries.isEmpty) {
+          return const SectionCard(
+            child: Text(
+              'No meals logged yet. Add your first entry to start trend tracking.',
+            ),
+          );
+        }
+
+        return TweenAnimationBuilder<double>(
+          duration: AppDurations.medium,
+          tween: Tween<double>(begin: 0, end: 1),
+          curve: Curves.easeOut,
+          builder: (BuildContext context, double value, Widget? child) {
+            return Opacity(opacity: value, child: child);
+          },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'What did you last eat?',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: _mealController,
-                minLines: 3,
-                maxLines: 5,
-                textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  hintText:
-                      'Example: grilled chicken wrap, apple, and iced latte',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              recentSuggestions.when(
-                data: (List<String> suggestions) {
-                  if (suggestions.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  return Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: suggestions
-                        .map(
-                          (String suggestion) => ActionChip(
-                            label: Text(
-                              suggestion,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            onPressed: () => _useSuggestion(suggestion),
-                          ),
-                        )
-                        .toList(growable: false),
-                  );
-                },
-                error: (_, _) => const SizedBox.shrink(),
-                loading: () => const LinearProgressIndicator(minHeight: 2),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AnimatedContainer(
-                duration: AppDurations.short,
-                curve: Curves.easeOut,
-                transform: Matrix4.diagonal3Values(
-                  mealState.isSubmitting ? 0.98 : 1.0,
-                  mealState.isSubmitting ? 0.98 : 1.0,
-                  1,
-                ),
-                child: ElevatedButton.icon(
-                  onPressed: mealState.isSubmitting ? null : _submitMeal,
-                  icon:
-                      mealState.isSubmitting
-                          ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Icon(Icons.auto_awesome_rounded),
-                  label: Text(
-                    mealState.isSubmitting
-                        ? 'Estimating nutrition...'
-                        : 'Analyze and Save Meal',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        AnimatedSwitcher(
-          duration: AppDurations.medium,
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          child:
-              mealState.latestEntry == null
-                  ? const SizedBox.shrink()
-                  : NutritionBreakdownCard(
-                    key: ValueKey<int?>(mealState.latestEntry?.id),
-                    entry: mealState.latestEntry!,
-                  ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Text('Recent logs', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppSpacing.sm),
-        recentMeals.when(
-          data: (List<MealLogEntry> entries) {
-            if (entries.isEmpty) {
-              return const SectionCard(
-                child: Text(
-                  'No meals logged yet. Add your first entry to start trend tracking.',
-                ),
-              );
-            }
-
-            return TweenAnimationBuilder<double>(
-              duration: AppDurations.medium,
-              tween: Tween<double>(begin: 0, end: 1),
-              curve: Curves.easeOut,
-              builder: (BuildContext context, double value, Widget? child) {
-                return Opacity(opacity: value, child: child);
-              },
-              child: Column(
-                children: entries
-                    .take(8)
-                    .map(
+            children: _groupRecentMeals(
+                  entries.take(12).toList(growable: false),
+                )
+                .expand(
+                  (_MealLogDayGroup group) => <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Text(
+                        _groupLabel(group.day),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    ...group.entries.map(
                       (MealLogEntry entry) => Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: _RecentMealRow(entry: entry),
                       ),
-                    )
-                    .toList(growable: false),
-              ),
-            );
-          },
-          error: (Object error, StackTrace stackTrace) {
-            return SectionCard(
-              child: Text('Failed to load recent meals: $error'),
-            );
-          },
-          loading:
-              () => const SectionCard(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Center(child: CircularProgressIndicator()),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                  ],
+                )
+                .toList(growable: false),
+          ),
+        );
+      },
+      error: (Object error, StackTrace stackTrace) {
+        return SectionCard(child: Text('Failed to load recent meals: $error'));
+      },
+      loading:
+          () => const SectionCard(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+    );
+
+    final Widget recentLogsSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('Recent logs', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: AppSpacing.sm),
+        recentLogsList,
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool useWideLayout = _useWideLayout(context, constraints);
+        final double horizontalPadding = _horizontalPaddingForWidth(
+          constraints.maxWidth,
+        );
+        final EdgeInsets contentPadding = EdgeInsets.fromLTRB(
+          horizontalPadding,
+          0,
+          horizontalPadding,
+          120,
+        );
+
+        final List<Widget> leftColumnChildren = <Widget>[
+          HeroBanner(
+            imageUrl: AppImages.hero,
+            title: 'Log your meals fast',
+            subtitle: 'Target: $dailyTarget kcal/day',
+            height: useWideLayout ? 220 : null,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          composerSection,
+        ];
+        if (mealState.latestEntry != null) {
+          leftColumnChildren
+            ..add(const SizedBox(height: AppSpacing.lg))
+            ..add(latestBreakdown);
+        }
+
+        if (!useWideLayout) {
+          return ListView(
+            padding: contentPadding,
+            children: <Widget>[
+              ...leftColumnChildren,
+              const SizedBox(height: AppSpacing.lg),
+              recentLogsSection,
+            ],
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: contentPadding,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                flex: 6,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: leftColumnChildren,
                 ),
               ),
-        ),
-      ],
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(flex: 5, child: recentLogsSection),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -227,6 +343,7 @@ class _RecentMealRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
 
     return SectionCard(
       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -238,12 +355,9 @@ class _RecentMealRow extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadii.md),
-              color: const Color(0xFFE9F5EE),
+              color: scheme.primaryContainer.withValues(alpha: 0.55),
             ),
-            child: const Icon(
-              Icons.restaurant_menu_rounded,
-              color: AppColors.leafDark,
-            ),
+            child: Icon(Icons.restaurant_menu_rounded, color: scheme.primary),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -255,7 +369,6 @@ class _RecentMealRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.titleMedium?.copyWith(
-                    color: AppColors.ink,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -265,6 +378,25 @@ class _RecentMealRow extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: <Widget>[
+                    _MacroPill(
+                      label: 'P',
+                      value: formatGrams(entry.nutrition.proteinGrams),
+                    ),
+                    _MacroPill(
+                      label: 'C',
+                      value: formatGrams(entry.nutrition.carbGrams),
+                    ),
+                    _MacroPill(
+                      label: 'F',
+                      value: formatGrams(entry.nutrition.fatGrams),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -277,7 +409,7 @@ class _RecentMealRow extends StatelessWidget {
                 formatCalories(entry.nutrition.calories),
                 style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: AppColors.leafDark,
+                  color: scheme.primary,
                 ),
               ),
               const SizedBox(height: AppSpacing.xxs),
@@ -285,6 +417,44 @@ class _RecentMealRow extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MealLogDayGroup {
+  _MealLogDayGroup({required this.day, required this.entries});
+
+  final DateTime day;
+  final List<MealLogEntry> entries;
+}
+
+class _MacroPill extends StatelessWidget {
+  const _MacroPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: AppSpacing.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Text(
+        '$label $value',
+        style: textTheme.labelSmall?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

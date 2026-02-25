@@ -18,6 +18,8 @@ class FormaApp extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      darkTheme: buildDarkAppTheme(),
+      themeMode: ThemeMode.system,
       home: AnimatedSwitcher(
         duration: AppDurations.medium,
         switchInCurve: Curves.easeOutCubic,

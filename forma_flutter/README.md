@@ -44,6 +44,10 @@ flutter run
 ```
 
 3. On first launch, enter your Mistral API key on the onboarding screen.
+4. If you need a key:
+   - sign in at `https://console.mistral.ai`
+   - open `API Keys`
+   - create a new key and copy it once
 
 ## Validation commands used
 

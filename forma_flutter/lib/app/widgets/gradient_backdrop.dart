@@ -11,34 +11,53 @@ class GradientBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final List<Color> gradientColors =
+        isDark
+            ? const <Color>[
+              Color(0xFF0C1512),
+              Color(0xFF111E18),
+              Color(0xFF18261F),
+            ]
+            : const <Color>[
+              Color(0xFFF7F3EA),
+              Color(0xFFF0F6EB),
+              Color(0xFFFFF8F2),
+            ];
+
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: <Color>[
-            Color(0xFFF7F3EA),
-            Color(0xFFF0F6EB),
-            Color(0xFFFFF8F2),
-          ],
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Stack(
         children: <Widget>[
-          const Positioned(
+          Positioned(
             top: -110,
             left: -70,
-            child: _BlurOrb(color: Color(0x66B5E1C5), size: 280),
+            child: _BlurOrb(
+              color: isDark ? const Color(0x334F906F) : const Color(0x66B5E1C5),
+              size: 280,
+            ),
           ),
-          const Positioned(
+          Positioned(
             top: 210,
             right: -80,
-            child: _BlurOrb(color: Color(0x66F6C5A9), size: 250),
+            child: _BlurOrb(
+              color: isDark ? const Color(0x334F906F) : const Color(0x66F6C5A9),
+              size: 250,
+            ),
           ),
-          const Positioned(
+          Positioned(
             bottom: -120,
             left: 30,
-            child: _BlurOrb(color: Color(0x66CCE8D6), size: 260),
+            child: _BlurOrb(
+              color: isDark ? const Color(0x33437A6D) : const Color(0x66CCE8D6),
+              size: 260,
+            ),
           ),
           Positioned.fill(
             child: SafeArea(

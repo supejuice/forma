@@ -14,6 +14,8 @@ class TrendLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+
     if (points.isEmpty) {
       return const SizedBox(height: 200);
     }
@@ -44,7 +46,7 @@ class TrendLineChart extends StatelessWidget {
             horizontalInterval: safeMaxY / 4,
             getDrawingHorizontalLine:
                 (double value) =>
-                    const FlLine(color: AppColors.line, strokeWidth: 1),
+                    FlLine(color: scheme.outlineVariant, strokeWidth: 1),
           ),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -103,8 +105,8 @@ class TrendLineChart extends StatelessWidget {
                       final CalorieTrendPoint point = points[spot.x.toInt()];
                       return LineTooltipItem(
                         '${formatShortDate(point.date)}\n${spot.y.toStringAsFixed(0)} kcal',
-                        const TextStyle(
-                          color: AppColors.ink,
+                        TextStyle(
+                          color: scheme.onSurface,
                           fontWeight: FontWeight.w700,
                         ),
                       );
@@ -117,13 +119,13 @@ class TrendLineChart extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: AppColors.leaf,
+              color: scheme.primary,
               curveSmoothness: 0.28,
               barWidth: 3,
               dotData: FlDotData(show: points.length <= 14),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppColors.leaf.withValues(alpha: 0.14),
+                color: scheme.primary.withValues(alpha: 0.14),
               ),
             ),
           ],

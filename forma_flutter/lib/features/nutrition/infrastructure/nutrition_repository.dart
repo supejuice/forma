@@ -1,6 +1,8 @@
 import '../domain/calorie_trend_point.dart';
+import '../domain/calorie_target_calculator.dart';
 import '../domain/date_range_filter.dart';
 import '../domain/meal_log_entry.dart';
+import '../domain/mistral_usage_ledger.dart';
 
 abstract interface class NutritionRepository {
   Future<MealLogEntry> saveMealLog(MealLogEntry entry);
@@ -16,4 +18,12 @@ abstract interface class NutritionRepository {
   Future<int?> readDailyCalorieTarget();
 
   Future<void> saveDailyCalorieTarget(int targetCalories);
+
+  Future<CalorieProfile?> readCalorieProfile();
+
+  Future<void> saveCalorieProfile(CalorieProfile profile);
+
+  Future<MistralUsageLedger?> readMistralUsageLedger();
+
+  Future<void> saveMistralUsageLedger(MistralUsageLedger ledger);
 }

@@ -8,30 +8,35 @@ class StatTile extends StatelessWidget {
     required this.value,
     super.key,
     this.tint = AppColors.leaf,
+    this.width = 150,
   });
 
   final String label;
   final String value;
   final Color tint;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
 
     return Container(
-      width: 150,
+      width: width,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.md),
-        color: Colors.white,
-        border: Border.all(color: AppColors.line),
+        color: scheme.surfaceContainerLowest,
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             label,
-            style: textTheme.bodySmall?.copyWith(color: AppColors.mutedInk),
+            style: textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(

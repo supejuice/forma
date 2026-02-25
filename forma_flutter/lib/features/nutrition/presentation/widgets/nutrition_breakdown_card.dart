@@ -13,20 +13,36 @@ class NutritionBreakdownCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final bool compact = MediaQuery.sizeOf(context).width < 460;
 
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(child: Text(entry.summary, style: textTheme.titleLarge)),
-              _Pill(
-                label:
-                    '${(entry.confidence * 100).clamp(0, 100).toStringAsFixed(0)}% confidence',
-              ),
-            ],
-          ),
+          if (compact)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(entry.summary, style: textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.xs),
+                _Pill(
+                  label:
+                      '${(entry.confidence * 100).clamp(0, 100).toStringAsFixed(0)}% confidence',
+                ),
+              ],
+            )
+          else
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(entry.summary, style: textTheme.titleLarge),
+                ),
+                _Pill(
+                  label:
+                      '${(entry.confidence * 100).clamp(0, 100).toStringAsFixed(0)}% confidence',
+                ),
+              ],
+            ),
           const SizedBox(height: AppSpacing.sm),
           Text(formatLongDate(entry.loggedAt), style: textTheme.bodyMedium),
           const SizedBox(height: AppSpacing.md),
@@ -83,6 +99,7 @@ class _MetricCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
 
     return Container(
       width: 112,
@@ -91,22 +108,24 @@ class _MetricCell extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDF9F2),
+        color: scheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: AppColors.line),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             label,
-            style: textTheme.bodySmall?.copyWith(color: AppColors.mutedInk),
+            style: textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             value,
             style: textTheme.bodyLarge?.copyWith(
-              color: AppColors.ink,
+              color: scheme.onSurface,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -123,6 +142,8 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -130,12 +151,12 @@ class _Pill extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadii.pill),
-        color: const Color(0xFFEBF6EF),
+        color: scheme.primaryContainer.withValues(alpha: 0.72),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: AppColors.leafDark,
+          color: scheme.onPrimaryContainer,
           fontWeight: FontWeight.w700,
         ),
       ),

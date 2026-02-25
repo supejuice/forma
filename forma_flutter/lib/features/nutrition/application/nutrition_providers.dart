@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 
 import '../../../core/app_exception.dart';
 import '../domain/calorie_trend_point.dart';
+import '../domain/calorie_target_calculator.dart';
 import '../domain/date_range_filter.dart';
 import '../domain/meal_log_entry.dart';
+import '../domain/mistral_usage_ledger.dart';
 import '../infrastructure/sqlite_nutrition_repository.dart';
 
 final FutureProvider<List<MealLogEntry>> recentMealsProvider =
@@ -98,6 +100,78 @@ calorieTargetControllerProvider =
     AsyncNotifierProvider<CalorieTargetController, int>(
       CalorieTargetController.new,
     );
+
+final FutureProvider<CalorieProfile?> calorieProfileProvider =
+    FutureProvider<CalorieProfile?>((Ref ref) {
+      return ref.read(nutritionRepositoryProvider).readCalorieProfile();
+    });
+
+final FutureProvider<MistralUsageLedger> mistralUsageLedgerProvider =
+    FutureProvider<MistralUsageLedger>((Ref ref) async {
+      return ref.read(mistralUsageLedgerControllerProvider).read();
+    });
+
+final Provider<CalorieProfileController> calorieProfileControllerProvider =
+    Provider<CalorieProfileController>(CalorieProfileController.new);
+
+final Provider<MistralUsageLedgerController>
+mistralUsageLedgerControllerProvider = Provider<MistralUsageLedgerController>(
+  MistralUsageLedgerController.new,
+);
+
+class CalorieProfileController {
+  const CalorieProfileController(this._ref);
+
+  final Ref _ref;
+
+  Future<CalorieProfile?> read() {
+    return _ref.read(nutritionRepositoryProvider).readCalorieProfile();
+  }
+
+  Future<void> save(CalorieProfile profile) async {
+    await _ref.read(nutritionRepositoryProvider).saveCalorieProfile(profile);
+    _ref.invalidate(calorieProfileProvider);
+  }
+}
+
+class MistralUsageLedgerController {
+  const MistralUsageLedgerController(this._ref);
+
+  final Ref _ref;
+
+  Future<MistralUsageLedger> read() async {
+    final repository = _ref.read(nutritionRepositoryProvider);
+    final MistralUsageLedger existing =
+        (await repository.readMistralUsageLedger()) ??
+        MistralUsageLedger.initial();
+    final MistralUsageLedger normalized = existing.normalizedFor(
+      DateTime.now(),
+    );
+    if (normalized.cycleYear != existing.cycleYear ||
+        normalized.cycleMonth != existing.cycleMonth) {
+      await repository.saveMistralUsageLedger(normalized);
+    }
+    return normalized;
+  }
+
+  Future<void> recordUsage(MistralTokenUsage usage) async {
+    final repository = _ref.read(nutritionRepositoryProvider);
+    final MistralUsageLedger current = await read();
+    final MistralUsageLedger updated = current.withRecordedRequest(usage);
+    await repository.saveMistralUsageLedger(updated);
+    _ref.invalidate(mistralUsageLedgerProvider);
+  }
+
+  Future<void> setMonthlyLimit(int? monthlyLimitTokens) async {
+    final repository = _ref.read(nutritionRepositoryProvider);
+    final MistralUsageLedger current = await read();
+    final MistralUsageLedger updated = current.withMonthlyLimit(
+      monthlyLimitTokens,
+    );
+    await repository.saveMistralUsageLedger(updated);
+    _ref.invalidate(mistralUsageLedgerProvider);
+  }
+}
 
 class CalorieTargetController extends AsyncNotifier<int> {
   @override

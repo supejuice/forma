@@ -27,6 +27,12 @@ final class AppRadii {
   static const double pill = 999;
 }
 
+final class AppBreakpoints {
+  static const double compact = 700;
+  static const double medium = 980;
+  static const double large = 1280;
+}
+
 final class AppDurations {
   static const Duration micro = Duration(milliseconds: 180);
   static const Duration short = Duration(milliseconds: 320);

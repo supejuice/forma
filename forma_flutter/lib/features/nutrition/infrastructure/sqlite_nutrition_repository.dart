@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -6,8 +7,10 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 import '../domain/calorie_trend_point.dart';
+import '../domain/calorie_target_calculator.dart';
 import '../domain/date_range_filter.dart';
 import '../domain/meal_log_entry.dart';
+import '../domain/mistral_usage_ledger.dart';
 import '../domain/nutrition_data.dart';
 import 'nutrition_repository.dart';
 
@@ -167,11 +170,83 @@ class SqliteNutritionRepository implements NutritionRepository {
   }
 
   @override
+  Future<MistralUsageLedger?> readMistralUsageLedger() async {
+    final Database db = await _database;
+    final List<Map<String, Object?>> rows = await db.query(
+      'settings',
+      columns: <String>['value'],
+      where: 'key = ?',
+      whereArgs: <Object?>['mistral_usage_ledger_v1'],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    final Object? value = rows.first['value'];
+    if (value is! String || value.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final Map<String, dynamic> payload =
+          (jsonDecode(value) as Map<dynamic, dynamic>).cast<String, dynamic>();
+      return MistralUsageLedger.fromJson(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<CalorieProfile?> readCalorieProfile() async {
+    final Database db = await _database;
+    final List<Map<String, Object?>> rows = await db.query(
+      'settings',
+      columns: <String>['value'],
+      where: 'key = ?',
+      whereArgs: <Object?>['calorie_profile_v1'],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    final Object? value = rows.first['value'];
+    if (value is! String || value.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final Map<String, dynamic> payload =
+          (jsonDecode(value) as Map<dynamic, dynamic>).cast<String, dynamic>();
+      return CalorieProfile.fromJson(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   Future<void> saveDailyCalorieTarget(int targetCalories) async {
     final Database db = await _database;
     await db.insert('settings', <String, Object>{
       'key': 'daily_calorie_target',
       'value': targetCalories.toString(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  @override
+  Future<void> saveCalorieProfile(CalorieProfile profile) async {
+    final Database db = await _database;
+    await db.insert('settings', <String, Object>{
+      'key': 'calorie_profile_v1',
+      'value': jsonEncode(profile.toJson()),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  @override
+  Future<void> saveMistralUsageLedger(MistralUsageLedger ledger) async {
+    final Database db = await _database;
+    await db.insert('settings', <String, Object>{
+      'key': 'mistral_usage_ledger_v1',
+      'value': jsonEncode(ledger.toJson()),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

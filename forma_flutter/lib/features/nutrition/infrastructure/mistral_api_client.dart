@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_exception.dart';
+import '../domain/mistral_usage_ledger.dart';
 
 final Provider<MistralApiClient> mistralApiClientProvider =
     Provider<MistralApiClient>(
@@ -24,7 +26,7 @@ class MistralApiClient {
 
   final Dio _dio;
 
-  Future<String> chatCompletions({
+  Future<ChatCompletionResult> chatCompletions({
     required String apiKey,
     required List<Map<String, String>> messages,
     String model = 'mistral-small-latest',
@@ -48,7 +50,10 @@ class MistralApiClient {
               'messages': messages,
             },
           );
-      return _extractMessageContent(response.data);
+      return ChatCompletionResult(
+        content: _extractMessageContent(response.data),
+        usage: _extractUsage(response.data),
+      );
     } on DioException catch (error) {
       if (_looksLikeUnsupportedResponseFormat(error)) {
         final Response<Map<String, dynamic>> fallbackResponse = await _dio
@@ -61,7 +66,10 @@ class MistralApiClient {
                 'messages': messages,
               },
             );
-        return _extractMessageContent(fallbackResponse.data);
+        return ChatCompletionResult(
+          content: _extractMessageContent(fallbackResponse.data),
+          usage: _extractUsage(fallbackResponse.data),
+        );
       }
       throw _apiExceptionFromDio(error);
     }
@@ -83,6 +91,20 @@ class MistralApiClient {
   AppException _apiExceptionFromDio(DioException error) {
     final Response<dynamic>? response = error.response;
     if (response == null) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout) {
+        return const AppException(
+          'Request to Mistral timed out. Check internet connection and retry.',
+        );
+      }
+
+      if (kIsWeb && _looksLikeBrowserBlockedRequest(error)) {
+        return const AppException(
+          'Browser blocked direct connection to Mistral. Use Save Without Check, or route Mistral calls through a backend proxy.',
+        );
+      }
+
       return const AppException(
         'Unable to reach Mistral right now. Check internet connection and retry.',
       );
@@ -100,6 +122,15 @@ class MistralApiClient {
     }
 
     return AppException('Mistral request failed (${response.statusCode}).');
+  }
+
+  bool _looksLikeBrowserBlockedRequest(DioException error) {
+    if (error.type != DioExceptionType.connectionError) {
+      return false;
+    }
+    final String message =
+        '${error.message ?? ''} ${error.error ?? ''}'.toLowerCase();
+    return message.contains('xmlhttprequest') || message.contains('cors');
   }
 
   String _extractErrorMessage(dynamic data) {
@@ -128,6 +159,24 @@ class MistralApiClient {
     }
     final String payload = jsonEncode(error.response?.data);
     return payload.contains('response_format');
+  }
+
+  MistralTokenUsage? _extractUsage(Map<String, dynamic>? payload) {
+    if (payload == null) {
+      return null;
+    }
+    final dynamic usageValue = payload['usage'];
+    if (usageValue is Map<String, dynamic>) {
+      final MistralTokenUsage usage = MistralTokenUsage.fromJson(usageValue);
+      return usage.totalTokens > 0 ? usage : null;
+    }
+    if (usageValue is Map<dynamic, dynamic>) {
+      final MistralTokenUsage usage = MistralTokenUsage.fromJson(
+        usageValue.cast<String, dynamic>(),
+      );
+      return usage.totalTokens > 0 ? usage : null;
+    }
+    return null;
   }
 
   String _extractMessageContent(Map<String, dynamic>? payload) {
@@ -176,4 +225,11 @@ class MistralApiClient {
 
     throw const AppException('Mistral returned an empty completion payload.');
   }
+}
+
+class ChatCompletionResult {
+  const ChatCompletionResult({required this.content, this.usage});
+
+  final String content;
+  final MistralTokenUsage? usage;
 }

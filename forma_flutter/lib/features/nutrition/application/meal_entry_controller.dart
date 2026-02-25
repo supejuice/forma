@@ -97,13 +97,23 @@ class MealEntryController extends Notifier<MealEntryState> {
       final MealLogEntry savedEntry = await ref
           .read(nutritionRepositoryProvider)
           .saveMealLog(entry);
+      final String successMessage =
+          extraction.usage == null
+              ? 'Meal saved successfully.'
+              : 'Meal saved. ${extraction.usage!.totalTokens} tokens used.';
 
       state = state.copyWith(
         isSubmitting: false,
         latestEntry: savedEntry,
-        statusMessage: 'Meal saved successfully.',
+        statusMessage: successMessage,
         clearError: true,
       );
+
+      if (extraction.usage != null) {
+        await ref
+            .read(mistralUsageLedgerControllerProvider)
+            .recordUsage(extraction.usage!);
+      }
 
       ref.invalidate(recentMealsProvider);
       ref.invalidate(recentMealTextsProvider);

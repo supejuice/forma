@@ -38,11 +38,21 @@ class MistralNutritionFlow implements NutritionFlow {
     }
 
     final List<Map<String, String>> messages = promptFactory.messages(mealText);
-    final String completion = await client.chatCompletions(
+    final ChatCompletionResult completion = await client.chatCompletions(
       apiKey: apiKey,
       messages: messages,
     );
-    return parser.parse(completion, fallbackSummary: mealText);
+    final NutritionExtraction parsed = parser.parse(
+      completion.content,
+      fallbackSummary: mealText,
+    );
+    return NutritionExtraction(
+      summary: parsed.summary,
+      nutrition: parsed.nutrition,
+      confidence: parsed.confidence,
+      notes: parsed.notes,
+      usage: completion.usage,
+    );
   }
 }
 
