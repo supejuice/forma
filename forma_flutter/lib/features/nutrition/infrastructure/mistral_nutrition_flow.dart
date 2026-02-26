@@ -71,7 +71,8 @@ class NutritionPromptFactory {
       'Use realistic portion assumptions and total all listed foods. '
       'Output schema: '
       '{"meal_summary": string, "nutrition": {"calories": number, "protein_g": number, '
-      '"carbs_g": number, "fat_g": number, "fiber_g": number, "sugar_g": number, "sodium_mg": number}, '
+      '"carbs_g": number, "fat_g": number, "fiber_g": number, "sugar_g": number, '
+      '"sodium_mg": number, "potassium_mg": number}, '
       '"confidence": number, "notes": string}. '
       'Rules: no markdown, no prose, confidence 0 to 1, no null values, nutrition numbers must be >= 0.';
 }
@@ -97,6 +98,7 @@ class NutritionResponseParser {
           fiberGrams: _numericValue(nutritionMap, 'fiber_g'),
           sugarGrams: _numericValue(nutritionMap, 'sugar_g'),
           sodiumMilligrams: _numericValue(nutritionMap, 'sodium_mg'),
+          potassiumMilligrams: _numericValue(nutritionMap, 'potassium_mg'),
         ).withFallbackCaloriesFromMacros();
 
     final String summary =

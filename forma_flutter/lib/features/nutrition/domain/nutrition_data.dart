@@ -9,6 +9,7 @@ class NutritionData {
     required this.fiberGrams,
     required this.sugarGrams,
     required this.sodiumMilligrams,
+    required this.potassiumMilligrams,
   });
 
   final double calories;
@@ -18,6 +19,7 @@ class NutritionData {
   final double fiberGrams;
   final double sugarGrams;
   final double sodiumMilligrams;
+  final double potassiumMilligrams;
 
   NutritionData normalized() {
     return NutritionData(
@@ -28,6 +30,7 @@ class NutritionData {
       fiberGrams: _nonNegative(fiberGrams),
       sugarGrams: _nonNegative(sugarGrams),
       sodiumMilligrams: _nonNegative(sodiumMilligrams),
+      potassiumMilligrams: _nonNegative(potassiumMilligrams),
     );
   }
 
@@ -45,6 +48,7 @@ class NutritionData {
       fiberGrams: _nonNegative(fiberGrams),
       sugarGrams: _nonNegative(sugarGrams),
       sodiumMilligrams: _nonNegative(sodiumMilligrams),
+      potassiumMilligrams: _nonNegative(potassiumMilligrams),
     );
   }
 
@@ -57,6 +61,7 @@ class NutritionData {
       'fiber_g': fiberGrams,
       'sugar_g': sugarGrams,
       'sodium_mg': sodiumMilligrams,
+      'potassium_mg': potassiumMilligrams,
     };
   }
 

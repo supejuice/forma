@@ -15,7 +15,8 @@ void main() {
         "fat_g": 21,
         "fiber_g": 9,
         "sugar_g": 6,
-        "sodium_mg": 820
+        "sodium_mg": 820,
+        "potassium_mg": 920
       },
       "confidence": 0.82,
       "notes": "Assumes one bowl serving"
@@ -27,6 +28,7 @@ void main() {
     expect(extraction.summary, 'Chicken bowl');
     expect(extraction.nutrition.calories, 620);
     expect(extraction.nutrition.proteinGrams, 42);
+    expect(extraction.nutrition.potassiumMilligrams, 920);
     expect(extraction.confidence, closeTo(0.82, 0.001));
   });
 
@@ -59,6 +61,7 @@ void main() {
 
       expect(extraction.summary, 'Yogurt snack');
       expect(extraction.nutrition.calories, 290); // 20*4 + 30*4 + 10*9
+      expect(extraction.nutrition.potassiumMilligrams, 0);
       expect(extraction.confidence, closeTo(0.71, 0.001));
     },
   );

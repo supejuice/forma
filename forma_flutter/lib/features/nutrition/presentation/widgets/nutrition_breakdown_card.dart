@@ -78,6 +78,10 @@ class NutritionBreakdownCard extends StatelessWidget {
                 label: 'Sodium',
                 value: formatMilligrams(entry.nutrition.sodiumMilligrams),
               ),
+              _MetricCell(
+                label: 'Potassium',
+                value: formatMilligrams(entry.nutrition.potassiumMilligrams),
+              ),
             ],
           ),
           if (entry.notes.trim().isNotEmpty) ...<Widget>[

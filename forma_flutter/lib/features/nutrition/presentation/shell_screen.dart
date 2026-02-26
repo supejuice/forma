@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/design_tokens.dart';
 import '../../../app/widgets/gradient_backdrop.dart';
+import '../application/daily_feedback_controller.dart';
 import '../../settings/presentation/mistral_settings_screen.dart';
 import 'home_screen.dart';
 import 'trends_screen.dart';
@@ -15,14 +18,62 @@ class NutritionShellScreen extends ConsumerStatefulWidget {
       _NutritionShellScreenState();
 }
 
-class _NutritionShellScreenState extends ConsumerState<NutritionShellScreen> {
+class _NutritionShellScreenState extends ConsumerState<NutritionShellScreen>
+    with WidgetsBindingObserver {
   int _index = 0;
+  Timer? _midnightSyncTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleNextMidnightSync();
+    _triggerDailyFeedbackSync();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scheduleNextMidnightSync();
+      _triggerDailyFeedbackSync();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _midnightSyncTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _openMistralSettings() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) => const MistralSettingsScreen(),
       ),
+    );
+  }
+
+  void _scheduleNextMidnightSync() {
+    _midnightSyncTimer?.cancel();
+    final DateTime now = DateTime.now();
+    final DateTime nextMidnight = DateTime(
+      now.year,
+      now.month,
+      now.day + 1,
+      0,
+      3,
+    );
+    final Duration wait = nextMidnight.difference(now);
+    _midnightSyncTimer = Timer(wait, () {
+      _triggerDailyFeedbackSync();
+      _scheduleNextMidnightSync();
+    });
+  }
+
+  void _triggerDailyFeedbackSync() {
+    unawaited(
+      ref.read(dailyFeedbackControllerProvider).syncPendingEndOfDayFeedback(),
     );
   }
 
