@@ -21,6 +21,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _mealController = TextEditingController();
+  DateTime _selectedLoggedAt = DateTime.now();
 
   @override
   void dispose() {
@@ -31,7 +32,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _submitMeal() async {
     await ref
         .read(mealEntryControllerProvider.notifier)
-        .submitMeal(_mealController.text);
+        .submitMeal(_mealController.text, loggedAt: _selectedLoggedAt);
+  }
+
+  Future<void> _pickEntryDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedLoggedAt,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _selectedLoggedAt = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        _selectedLoggedAt.hour,
+        _selectedLoggedAt.minute,
+        _selectedLoggedAt.second,
+        _selectedLoggedAt.millisecond,
+        _selectedLoggedAt.microsecond,
+      );
+    });
+  }
+
+  Future<void> _editLogDate(MealLogEntry entry) async {
+    final DateTime now = DateTime.now();
+    final DateTime initialDate = entry.loggedAt;
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) {
+      return;
+    }
+
+    final DateTime updated = DateTime(
+      picked.year,
+      picked.month,
+      picked.day,
+      initialDate.hour,
+      initialDate.minute,
+      initialDate.second,
+      initialDate.millisecond,
+      initialDate.microsecond,
+    );
+    await ref
+        .read(mealEntryControllerProvider.notifier)
+        .updateMealLoggedAt(entry: entry, loggedAt: updated);
   }
 
   void _useSuggestion(String text) {
@@ -106,7 +160,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       final String? status = next.statusMessage;
       if (status != null && status != previous?.statusMessage) {
-        _mealController.clear();
+        if (status.startsWith('Meal saved')) {
+          _mealController.clear();
+          setState(() {
+            _selectedLoggedAt = DateTime.now();
+          });
+        }
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(status)));
@@ -174,6 +233,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             error: (_, _) => const SizedBox.shrink(),
             loading: () => const LinearProgressIndicator(minHeight: 2),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: <Widget>[
+              ActionChip(
+                avatar: const Icon(Icons.calendar_month_rounded, size: 18),
+                label: Text('Date: ${formatLongDate(_selectedLoggedAt)}'),
+                onPressed: _pickEntryDate,
+              ),
+              if (!DateUtils.isSameDay(_selectedLoggedAt, DateTime.now()))
+                ActionChip(
+                  avatar: const Icon(Icons.today_rounded, size: 18),
+                  label: const Text('Today'),
+                  onPressed: () {
+                    setState(() {
+                      _selectedLoggedAt = DateTime.now();
+                    });
+                  },
+                ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           AnimatedContainer(
             duration: AppDurations.short,
@@ -228,6 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           groupLabel: _groupLabel,
           groupRecentMeals: _groupRecentMeals,
           dayKey: _dayKey,
+          onEditDate: _editLogDate,
         );
       } else if (recentDailyFeedback case AsyncError<List<DailyFeedbackEntry>>(
         error: final error,
@@ -330,9 +412,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _RecentMealRow extends StatelessWidget {
-  const _RecentMealRow({required this.entry});
+  const _RecentMealRow({required this.entry, required this.onEditDate});
 
   final MealLogEntry entry;
+  final VoidCallback onEditDate;
 
   @override
   Widget build(BuildContext context) {
@@ -408,6 +491,13 @@ class _RecentMealRow extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xxs),
               Text(formatShortDate(entry.loggedAt), style: textTheme.bodySmall),
+              IconButton(
+                tooltip: 'Edit log date',
+                iconSize: 18,
+                visualDensity: VisualDensity.compact,
+                onPressed: onEditDate,
+                icon: const Icon(Icons.edit_calendar_rounded),
+              ),
             ],
           ),
         ],
@@ -430,6 +520,7 @@ class _RecentLogsList extends StatelessWidget {
     required this.groupLabel,
     required this.groupRecentMeals,
     required this.dayKey,
+    required this.onEditDate,
   });
 
   final List<MealLogEntry> entries;
@@ -438,6 +529,7 @@ class _RecentLogsList extends StatelessWidget {
   final List<_MealLogDayGroup> Function(List<MealLogEntry> entries)
   groupRecentMeals;
   final String Function(DateTime value) dayKey;
+  final Future<void> Function(MealLogEntry entry) onEditDate;
 
   @override
   Widget build(BuildContext context) {
@@ -479,7 +571,12 @@ class _RecentLogsList extends StatelessWidget {
                 ...group.entries.map(
                   (MealLogEntry entry) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: _RecentMealRow(entry: entry),
+                    child: _RecentMealRow(
+                      entry: entry,
+                      onEditDate: () {
+                        onEditDate(entry);
+                      },
+                    ),
                   ),
                 ),
                 if (feedbackByDay.containsKey(dayKey(group.day)))

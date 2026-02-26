@@ -62,7 +62,7 @@ class MealEntryController extends Notifier<MealEntryState> {
     state = state.copyWith(clearStatus: true);
   }
 
-  Future<void> submitMeal(String rawMealText) async {
+  Future<void> submitMeal(String rawMealText, {DateTime? loggedAt}) async {
     final String mealText = rawMealText.trim();
     if (mealText.isEmpty) {
       state = state.copyWith(
@@ -93,7 +93,10 @@ class MealEntryController extends Notifier<MealEntryState> {
         mealText: mealText.trim(),
       );
 
-      final MealLogEntry entry = extraction.toMealLogEntry(rawText: mealText);
+      final MealLogEntry entry = extraction.toMealLogEntry(
+        rawText: mealText,
+        loggedAt: loggedAt,
+      );
       final MealLogEntry savedEntry = await ref
           .read(nutritionRepositoryProvider)
           .saveMealLog(entry);
@@ -128,6 +131,48 @@ class MealEntryController extends Notifier<MealEntryState> {
       state = state.copyWith(
         isSubmitting: false,
         errorMessage: 'Failed to log meal right now. Please retry.',
+        clearStatus: true,
+      );
+    }
+  }
+
+  Future<void> updateMealLoggedAt({
+    required MealLogEntry entry,
+    required DateTime loggedAt,
+  }) async {
+    final int? id = entry.id;
+    if (id == null) {
+      state = state.copyWith(
+        errorMessage: 'Unable to update date for this entry.',
+        clearStatus: true,
+      );
+      return;
+    }
+
+    try {
+      await ref
+          .read(nutritionRepositoryProvider)
+          .updateMealLogDate(id: id, loggedAt: loggedAt);
+
+      final MealLogEntry? latest = state.latestEntry;
+      final MealLogEntry? updatedLatest =
+          latest != null && latest.id == id
+              ? latest.copyWith(loggedAt: loggedAt)
+              : null;
+
+      state = state.copyWith(
+        latestEntry: updatedLatest,
+        statusMessage: 'Log date updated.',
+        clearError: true,
+      );
+
+      ref.invalidate(recentMealsProvider);
+      ref.invalidate(calorieTrendProvider);
+    } on AppException catch (error) {
+      state = state.copyWith(errorMessage: error.message, clearStatus: true);
+    } catch (_) {
+      state = state.copyWith(
+        errorMessage: 'Failed to update log date. Please retry.',
         clearStatus: true,
       );
     }

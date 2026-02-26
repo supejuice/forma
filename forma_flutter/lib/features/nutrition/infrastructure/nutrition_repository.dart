@@ -9,6 +9,8 @@ import '../domain/mistral_usage_ledger.dart';
 abstract interface class NutritionRepository {
   Future<MealLogEntry> saveMealLog(MealLogEntry entry);
 
+  Future<void> updateMealLogDate({required int id, required DateTime loggedAt});
+
   Future<List<MealLogEntry>> recentMeals({int limit = 20});
 
   Future<List<String>> recentMealTexts({int limit = 10});

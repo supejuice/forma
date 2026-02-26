@@ -434,6 +434,20 @@ class SqliteNutritionRepository implements NutritionRepository {
   }
 
   @override
+  Future<void> updateMealLogDate({
+    required int id,
+    required DateTime loggedAt,
+  }) async {
+    final Database db = await _database;
+    await db.update(
+      'meal_logs',
+      <String, Object>{'logged_at': loggedAt.toIso8601String()},
+      where: 'id = ?',
+      whereArgs: <Object?>[id],
+    );
+  }
+
+  @override
   Future<double> totalCalories(DateRangeFilter range) async {
     final DateRangeFilter normalized = range.normalized();
     final Database db = await _database;
