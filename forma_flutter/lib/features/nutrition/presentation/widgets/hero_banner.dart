@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/design_tokens.dart';
 
-class HeroBanner extends StatelessWidget {
+class HeroBanner extends StatefulWidget {
   const HeroBanner({
     required this.imageUrl,
     required this.title,
@@ -17,12 +17,35 @@ class HeroBanner extends StatelessWidget {
   final double? height;
 
   @override
+  State<HeroBanner> createState() => _HeroBannerState();
+}
+
+class _HeroBannerState extends State<HeroBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _driftController;
+
+  @override
+  void initState() {
+    super.initState();
+    _driftController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 16),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _driftController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final Orientation orientation = MediaQuery.orientationOf(context);
     final double bannerHeight =
-        height ??
+        widget.height ??
         (orientation == Orientation.landscape &&
                 MediaQuery.sizeOf(context).width > 820
             ? 220
@@ -35,29 +58,42 @@ class HeroBanner extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              frameBuilder: (
-                BuildContext context,
-                Widget child,
-                int? frame,
-                bool wasSynchronouslyLoaded,
-              ) {
-                return AnimatedOpacity(
-                  opacity: frame == null ? 0 : 1,
-                  duration: AppDurations.short,
-                  curve: Curves.easeOut,
-                  child: child,
+            AnimatedBuilder(
+              animation: _driftController,
+              builder: (BuildContext context, Widget? child) {
+                final double t = _driftController.value;
+                final double scale = 1.03 + (0.035 * t);
+                final double dx = -8 + (16 * t);
+                final double dy = -2 + (6 * t);
+                return Transform.translate(
+                  offset: Offset(dx, dy),
+                  child: Transform.scale(scale: scale, child: child),
                 );
               },
-              errorBuilder: (
-                BuildContext context,
-                Object error,
-                StackTrace? stackTrace,
-              ) {
-                return Container(color: scheme.primaryContainer);
-              },
+              child: Image.network(
+                widget.imageUrl,
+                fit: BoxFit.cover,
+                frameBuilder: (
+                  BuildContext context,
+                  Widget child,
+                  int? frame,
+                  bool wasSynchronouslyLoaded,
+                ) {
+                  return AnimatedOpacity(
+                    opacity: frame == null ? 0 : 1,
+                    duration: AppDurations.short,
+                    curve: Curves.easeOut,
+                    child: child,
+                  );
+                },
+                errorBuilder: (
+                  BuildContext context,
+                  Object error,
+                  StackTrace? stackTrace,
+                ) {
+                  return Container(color: scheme.primaryContainer);
+                },
+              ),
             ),
             const DecoratedBox(
               decoration: BoxDecoration(
@@ -75,7 +111,7 @@ class HeroBanner extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
                   Text(
-                    title,
+                    widget.title,
                     style: textTheme.headlineMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -83,7 +119,7 @@ class HeroBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    subtitle,
+                    widget.subtitle,
                     style: textTheme.bodyLarge?.copyWith(color: Colors.white),
                   ),
                 ],

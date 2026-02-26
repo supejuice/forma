@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/design_tokens.dart';
+import '../../../app/widgets/animated_reveal.dart';
 import '../../../core/app_exception.dart';
 import '../../../core/formatters.dart';
 import '../application/nutrition_providers.dart';
@@ -621,9 +622,26 @@ class TrendsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Showing ${selection.range.label}',
-            style: Theme.of(context).textTheme.bodyMedium,
+          AnimatedSwitcher(
+            duration: AppDurations.short,
+            switchInCurve: AppCurves.entrance,
+            switchOutCurve: AppCurves.exit,
+            transitionBuilder:
+                (Widget child, Animation<double> animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.12),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+            child: Text(
+              'Showing ${selection.range.label}',
+              key: ValueKey<String>(selection.range.label),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
         ],
       ),
@@ -644,10 +662,28 @@ class TrendsScreen extends ConsumerWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      '$value kcal',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(color: scheme.primary),
+                    AnimatedSwitcher(
+                      duration: AppDurations.short,
+                      switchInCurve: AppCurves.entrance,
+                      switchOutCurve: AppCurves.exit,
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) =>
+                              FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, 0.12),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              ),
+                      child: Text(
+                        '$value kcal',
+                        key: ValueKey<int>(value),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(color: scheme.primary),
+                      ),
                     ),
                   ],
                 ),
@@ -941,22 +977,40 @@ class TrendsScreen extends ConsumerWidget {
           return ListView(
             padding: contentPadding,
             children: <Widget>[
-              const HeroBanner(
-                imageUrl: AppImages.trend,
-                title: 'Calorie trends',
-                subtitle:
-                    'Watch progress over 7 days, 30 days, 90 days, or custom.',
+              const AnimatedReveal(
+                delay: Duration(milliseconds: 40),
+                child: HeroBanner(
+                  imageUrl: AppImages.trend,
+                  title: 'Calorie trends',
+                  subtitle:
+                      'Watch progress over 7 days, 30 days, 90 days, or custom.',
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              rangeSection,
+              AnimatedReveal(
+                delay: const Duration(milliseconds: 100),
+                child: rangeSection,
+              ),
               const SizedBox(height: AppSpacing.md),
-              chartSection,
+              AnimatedReveal(
+                delay: const Duration(milliseconds: 150),
+                child: chartSection,
+              ),
               const SizedBox(height: AppSpacing.md),
-              targetSection,
+              AnimatedReveal(
+                delay: const Duration(milliseconds: 200),
+                child: targetSection,
+              ),
               const SizedBox(height: AppSpacing.md),
-              bodyInsightsSection,
+              AnimatedReveal(
+                delay: const Duration(milliseconds: 250),
+                child: bodyInsightsSection,
+              ),
               const SizedBox(height: AppSpacing.md),
-              guidanceSection,
+              const AnimatedReveal(
+                delay: Duration(milliseconds: 300),
+                child: guidanceSection,
+              ),
             ],
           );
         }
@@ -971,26 +1025,48 @@ class TrendsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const HeroBanner(
-                      imageUrl: AppImages.trend,
-                      title: 'Calorie trends',
-                      subtitle:
-                          'Watch progress over 7 days, 30 days, 90 days, or custom.',
-                      height: 220,
+                    const AnimatedReveal(
+                      delay: Duration(milliseconds: 40),
+                      child: HeroBanner(
+                        imageUrl: AppImages.trend,
+                        title: 'Calorie trends',
+                        subtitle:
+                            'Watch progress over 7 days, 30 days, 90 days, or custom.',
+                        height: 220,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    rangeSection,
+                    AnimatedReveal(
+                      delay: const Duration(milliseconds: 100),
+                      child: rangeSection,
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    targetSection,
+                    AnimatedReveal(
+                      delay: const Duration(milliseconds: 160),
+                      child: targetSection,
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    bodyInsightsSection,
+                    AnimatedReveal(
+                      delay: const Duration(milliseconds: 220),
+                      child: bodyInsightsSection,
+                    ),
                     const SizedBox(height: AppSpacing.md),
-                    guidanceSection,
+                    const AnimatedReveal(
+                      delay: Duration(milliseconds: 280),
+                      child: guidanceSection,
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: AppSpacing.lg),
-              Expanded(flex: 7, child: chartSection),
+              Expanded(
+                flex: 7,
+                child: AnimatedReveal(
+                  delay: const Duration(milliseconds: 140),
+                  beginOffset: const Offset(0.03, 0),
+                  child: chartSection,
+                ),
+              ),
             ],
           ),
         );

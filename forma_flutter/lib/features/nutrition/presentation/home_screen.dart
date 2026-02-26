@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/design_tokens.dart';
+import '../../../app/widgets/animated_reveal.dart';
 import '../../../core/formatters.dart';
 import '../application/daily_feedback_controller.dart';
 import '../application/meal_entry_controller.dart';
@@ -240,7 +241,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: <Widget>[
               ActionChip(
                 avatar: const Icon(Icons.calendar_month_rounded, size: 18),
-                label: Text('Date: ${formatLongDate(_selectedLoggedAt)}'),
+                label: AnimatedSwitcher(
+                  duration: AppDurations.short,
+                  switchInCurve: AppCurves.entrance,
+                  switchOutCurve: AppCurves.exit,
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) =>
+                          FadeTransition(opacity: animation, child: child),
+                  child: Text(
+                    'Date: ${formatLongDate(_selectedLoggedAt)}',
+                    key: ValueKey<String>(_selectedLoggedAt.toIso8601String()),
+                  ),
+                ),
                 onPressed: _pickEntryDate,
               ),
               if (!DateUtils.isSameDay(_selectedLoggedAt, DateTime.now()))
@@ -363,19 +375,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
 
         final List<Widget> leftColumnChildren = <Widget>[
-          HeroBanner(
-            imageUrl: AppImages.hero,
-            title: 'Log your meals fast',
-            subtitle: 'Target: $dailyTarget kcal/day',
-            height: useWideLayout ? 220 : null,
+          AnimatedReveal(
+            delay: const Duration(milliseconds: 40),
+            child: HeroBanner(
+              imageUrl: AppImages.hero,
+              title: 'Log your meals fast',
+              subtitle: 'Target: $dailyTarget kcal/day',
+              height: useWideLayout ? 220 : null,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          composerSection,
+          AnimatedReveal(
+            delay: const Duration(milliseconds: 110),
+            child: composerSection,
+          ),
         ];
         if (mealState.latestEntry != null) {
           leftColumnChildren
             ..add(const SizedBox(height: AppSpacing.lg))
-            ..add(latestBreakdown);
+            ..add(
+              AnimatedReveal(
+                delay: const Duration(milliseconds: 180),
+                child: latestBreakdown,
+              ),
+            );
         }
 
         if (!useWideLayout) {
@@ -384,7 +407,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: <Widget>[
               ...leftColumnChildren,
               const SizedBox(height: AppSpacing.lg),
-              recentLogsSection,
+              AnimatedReveal(
+                delay: const Duration(milliseconds: 230),
+                child: recentLogsSection,
+              ),
             ],
           );
         }
@@ -402,7 +428,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.lg),
-              Expanded(flex: 5, child: recentLogsSection),
+              Expanded(
+                flex: 5,
+                child: AnimatedReveal(
+                  delay: const Duration(milliseconds: 220),
+                  beginOffset: const Offset(0.03, 0),
+                  child: recentLogsSection,
+                ),
+              ),
             ],
           ),
         );
@@ -490,7 +523,28 @@ class _RecentMealRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xxs),
-              Text(formatShortDate(entry.loggedAt), style: textTheme.bodySmall),
+              AnimatedSwitcher(
+                duration: AppDurations.short,
+                switchInCurve: AppCurves.entrance,
+                switchOutCurve: AppCurves.exit,
+                transitionBuilder:
+                    (Widget child, Animation<double> animation) =>
+                        FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.2),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        ),
+                child: Text(
+                  formatShortDate(entry.loggedAt),
+                  key: ValueKey<String>(entry.loggedAt.toIso8601String()),
+                  style: textTheme.bodySmall,
+                ),
+              ),
               IconButton(
                 tooltip: 'Edit log date',
                 iconSize: 18,
@@ -546,6 +600,59 @@ class _RecentLogsList extends StatelessWidget {
     for (final DailyFeedbackEntry feedback in dailyFeedback) {
       feedbackByDay[dayKey(feedback.day)] = feedback;
     }
+    final List<_MealLogDayGroup> groups = groupRecentMeals(entries);
+    int motionIndex = 0;
+    final List<Widget> stagedChildren = <Widget>[];
+    for (final _MealLogDayGroup group in groups) {
+      stagedChildren.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: Text(
+            groupLabel(group.day),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      );
+
+      for (final MealLogEntry entry in group.entries) {
+        final int index = motionIndex++;
+        stagedChildren.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: AnimatedReveal(
+              delay: Duration(milliseconds: 38 * (index > 8 ? 8 : index)),
+              beginOffset: const Offset(0, 0.03),
+              child: _RecentMealRow(
+                entry: entry,
+                onEditDate: () {
+                  onEditDate(entry);
+                },
+              ),
+            ),
+          ),
+        );
+      }
+
+      if (feedbackByDay.containsKey(dayKey(group.day))) {
+        final int index = motionIndex++;
+        stagedChildren.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: AnimatedReveal(
+              delay: Duration(milliseconds: 38 * (index > 8 ? 8 : index)),
+              beginOffset: const Offset(0, 0.03),
+              child: _DailyFeedbackRow(
+                entry: feedbackByDay[dayKey(group.day)]!,
+              ),
+            ),
+          ),
+        );
+      }
+
+      stagedChildren.add(const SizedBox(height: AppSpacing.xs));
+    }
 
     return TweenAnimationBuilder<double>(
       duration: AppDurations.medium,
@@ -556,40 +663,7 @@ class _RecentLogsList extends StatelessWidget {
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: groupRecentMeals(entries)
-            .expand(
-              (_MealLogDayGroup group) => <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: Text(
-                    groupLabel(group.day),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                ...group.entries.map(
-                  (MealLogEntry entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: _RecentMealRow(
-                      entry: entry,
-                      onEditDate: () {
-                        onEditDate(entry);
-                      },
-                    ),
-                  ),
-                ),
-                if (feedbackByDay.containsKey(dayKey(group.day)))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: _DailyFeedbackRow(
-                      entry: feedbackByDay[dayKey(group.day)]!,
-                    ),
-                  ),
-                const SizedBox(height: AppSpacing.xs),
-              ],
-            )
-            .toList(growable: false),
+        children: stagedChildren,
       ),
     );
   }

@@ -37,6 +37,15 @@ final class AppDurations {
   static const Duration micro = Duration(milliseconds: 180);
   static const Duration short = Duration(milliseconds: 320);
   static const Duration medium = Duration(milliseconds: 500);
+  static const Duration long = Duration(milliseconds: 720);
+}
+
+final class AppCurves {
+  static const Curve emphasized = Curves.easeOutCubic;
+  static const Curve standard = Curves.easeInOutCubic;
+  static const Curve entrance = Curves.easeOutQuart;
+  static const Curve exit = Curves.easeInCubic;
+  static const Curve spring = Cubic(0.34, 1.56, 0.64, 1);
 }
 
 final class AppImages {

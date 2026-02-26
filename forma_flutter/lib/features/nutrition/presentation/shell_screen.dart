@@ -90,9 +90,34 @@ class _NutritionShellScreenState extends ConsumerState<NutritionShellScreen>
         (isLandscape && screenSize.width >= AppBreakpoints.compact);
     final String title = _index == 0 ? 'Meal Logger' : 'Calorie Trends';
     final Widget activePage = AnimatedSwitcher(
-      duration: AppDurations.short,
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
+      duration: AppDurations.medium,
+      switchInCurve: AppCurves.entrance,
+      switchOutCurve: AppCurves.exit,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        final Animation<double> fade = CurvedAnimation(
+          parent: animation,
+          curve: AppCurves.standard,
+        );
+        final Animation<Offset> slide = Tween<Offset>(
+          begin: const Offset(0.05, 0),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(parent: animation, curve: AppCurves.entrance),
+        );
+        final Animation<double> scale = Tween<double>(
+          begin: 0.985,
+          end: 1,
+        ).animate(
+          CurvedAnimation(parent: animation, curve: AppCurves.entrance),
+        );
+        return FadeTransition(
+          opacity: fade,
+          child: SlideTransition(
+            position: slide,
+            child: ScaleTransition(scale: scale, child: child),
+          ),
+        );
+      },
       child: KeyedSubtree(key: ValueKey<int>(_index), child: pages[_index]),
     );
 
